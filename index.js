@@ -20,25 +20,51 @@ const client = new MongoClient(uri, {
   },
 });
 
+const admin = require("firebase-admin");
+
+const serviceAccount = require("./firebase-adminsdk.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+// -------------------------------------------------------
+const AuthVerification = async (req, res, next) => {
+  const AuthToken = req.headers.authorization;
+
+  if (!AuthToken) {
+    res.status(401).send({ message: "unauthorized" });
+  }
+  const token = AuthToken.split(" ")[1];
+
+  try {
+    await admin.auth().verifyIdToken(token);
+    next();
+  } catch (err) {
+    return res.status(401).send({ message: "unauthorized" });
+  }
+};
+
 async function run() {
   try {
     await client.connect();
 
     const IEdb = client.db("IEdb");
     const IEcol = IEdb.collection("AllProducts");
-
-    app.get("/", (req, res) => {
-      res.send("Server is up and running at : ", port);
+    // ------------------------------------------------------------
+    app.get("/", AuthVerification, async (req, res) => {
+      const cursor = IEcol.find();
+      const result = await cursor.toArray();
+      res.send(result);
     });
-
-    app.post("/products", async (req, res) => {
+    // ----------------------------------------------------------
+    app.post("/products", AuthVerification, async (req, res) => {
       const productDetails = req.body;
       console.log("hitting the post");
 
       const result = await IEcol.insertOne(productDetails);
       res.send(result);
     });
-
+    // -------------------------------------------------------------
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
