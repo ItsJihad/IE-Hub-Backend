@@ -37,7 +37,10 @@ const AuthVerification = async (req, res, next) => {
   const token = AuthToken.split(" ")[1];
 
   try {
-    await admin.auth().verifyIdToken(token);
+    const decode = await admin.auth().verifyIdToken(token);
+
+    req.token_email = decode.email;
+
     next();
   } catch (err) {
     return res.status(401).send({ message: "unauthorized" });
@@ -51,36 +54,46 @@ async function run() {
     const IEdb = client.db("IEdb");
     const IEcol = IEdb.collection("AllProducts");
     // --------------------------get all product at once----------------------------------
-    app.get("/products",  async (req, res) => {
+    app.get("/products", async (req, res) => {
       const cursor = IEcol.find();
       const result = await cursor.toArray();
+      console.log("hitting all get API");
+      
       res.send(result);
     });
-//-----------------------------get a specific product with ID------------------------------------
-   app.get('/products/:id',async(req,res)=>{
-    console.log('hitting');
-    
-    const id=req.params.id
-    console.log(id);
-    console.log(typeof(id));
-    
-    const query= { _id: new ObjectId(id)}
-    const result = await IEcol.findOne(query)
-    console.log(result);
-    
-    res.send(result)
-   })
+    //-----------------------------get a specific product with ID------------------------------------
+    app.get("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await IEcol.findOne(query);
+      console.log("specific id hitting");
+      res.send(result);
+    });
 
-
+    // ---------------------------get recent 6 products-----------------------------------------
+    app.get('/recentproducts', async(req,res)=>{
+      const cursor =  IEcol.find().sort({createdAt:1}).limit(6)
+      const result = await cursor.toArray()
+      res.send(result)
+    })
+    // ---------------------------get recent 3 products-----------------------------------------
+    app.get('/recent3', async(req,res)=>{
+      const cursor =  IEcol.find().sort({createdAt:-1}).limit(3)
+      const result = await cursor.toArray()
+      res.send(result)
+    })
 
     // --------------------------------POST API--------------------------
     app.post("/products", AuthVerification, async (req, res) => {
       const productDetails = req.body;
-      console.log("hitting the post");
-
       const result = await IEcol.insertOne(productDetails);
+      console.log("hitting the post");
       res.send(result);
     });
+
+
+
+
     // ---------------------------Ping the Server----------------------------------
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
