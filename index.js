@@ -28,6 +28,7 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 // -------------------------------------------------------
+
 const AuthVerification = async (req, res, next) => {
   const AuthToken = req.headers.authorization;
 
@@ -35,7 +36,6 @@ const AuthVerification = async (req, res, next) => {
     res.status(401).send({ message: "unauthorized" });
   }
   const token = AuthToken.split(" ")[1];
-
   try {
     const decode = await admin.auth().verifyIdToken(token);
 
@@ -57,8 +57,7 @@ async function run() {
     app.get("/products", async (req, res) => {
       const cursor = IEcol.find();
       const result = await cursor.toArray();
-      console.log("hitting all get API");
-      
+
       res.send(result);
     });
     //-----------------------------get a specific product with ID------------------------------------
@@ -66,24 +65,23 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await IEcol.findOne(query);
-      console.log("specific id hitting");
       res.send(result);
     });
 
     // ---------------------------get recent 6 products-----------------------------------------
-    app.get('/recentproducts', async(req,res)=>{
-      const cursor =  IEcol.find().sort({createdAt:1}).limit(6)
-      const result = await cursor.toArray()
-      res.send(result)
-    })
+    app.get("/recentproducts", async (req, res) => {
+      const cursor = IEcol.find().sort({ createdAt: 1 }).limit(6);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
     // ---------------------------get recent 3 products-----------------------------------------
-    app.get('/recent3', async(req,res)=>{
-      const cursor =  IEcol.find().sort({createdAt:-1}).limit(3)
-      const result = await cursor.toArray()
-      res.send(result)
-    })
+    app.get("/recent3", async (req, res) => {
+      const cursor = IEcol.find().sort({ createdAt: -1 }).limit(3);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
 
-    // --------------------------------POST API--------------------------
+    // --------------------------------POST API-------------------------------------------------------------------------------
     app.post("/products", AuthVerification, async (req, res) => {
       const productDetails = req.body;
       const result = await IEcol.insertOne(productDetails);
@@ -91,8 +89,19 @@ async function run() {
       res.send(result);
     });
 
+    //------------------------------------get specific user Export ---------------------------
+    app.get("/myexports", AuthVerification, async (req, res) => {
+      const email = req.query.email;
 
+      const DBquery = {};
+      if (email) {
+        DBquery.email = email;
+      }
+      const cursor = IEcol.find(DBquery);
+      const result = await cursor.toArray();
 
+      res.send(result);
+    });
 
     // ---------------------------Ping the Server----------------------------------
     // Send a ping to confirm a successful connection
