@@ -53,6 +53,7 @@ async function run() {
 
     const IEdb = client.db("IEdb");
     const IEcol = IEdb.collection("AllProducts");
+    const UserImports = IEdb.collection("UserImports");
     // --------------------------get all product at once----------------------------------
     app.get("/products", async (req, res) => {
       const cursor = IEcol.find();
@@ -83,12 +84,64 @@ async function run() {
 
     // --------------------------------POST API-------------------------------------------------------------------------------
     app.post("/products", AuthVerification, async (req, res) => {
-      const productDetails = req.body;
-      const result = await IEcol.insertOne(productDetails);
-      console.log("hitting the post");
+      const quantity = Number(req.body.quantity);
+      const price= Number(req.body.price)
+      const rating= Number(req.body.rating)
+
+      const TobeStored = {
+        name: req.body.name,
+        photourl: req.body.photourl,
+        rating,
+        price,
+        origin: req.body.origin,
+        email: req.body.email,
+        quantity,
+      };
+      const result = await IEcol.insertOne(TobeStored);
       res.send(result);
     });
 
+    //--------------------------------------------delete specific product by ID from Import---------------------
+    app.delete("/myimports/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await UserImports.deleteOne(query);
+      res.send(result);
+    });
+
+    //---------------------------------------------------------MYImports--------------------------------------------
+    app.post("/myimports", AuthVerification, async (req, res) => {
+      const productID = req.body.productID;
+      const proID = { _id: new ObjectId(productID) };
+      const quantity = Number(req.body.quantity);
+
+      const TobeStored = {
+        productID: proID,
+        name: req.body.name,
+        photourl: req.body.photourl,
+        rating: req.body.rating,
+        price: req.body.price,
+        origin: req.body.origin,
+        email: req.body.email,
+        quantity,
+      };
+      const update = await IEcol.updateOne(proID, {
+        $inc: { quantity: -quantity },
+      });
+      const result = await UserImports.insertOne(TobeStored);
+      res.send(result);
+    });
+    //-----------------------------------get specific Imports ------------------------------------------
+    app.get("/myimports", AuthVerification, async (req, res) => {
+      const email = req.query.email;
+      const DBquery = {};
+      if (email) {
+        DBquery.email = email;
+      }
+      const cursor = UserImports.find(DBquery);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
     //------------------------------------get specific user Export ---------------------------
     app.get("/myexports", AuthVerification, async (req, res) => {
       const email = req.query.email;
@@ -102,7 +155,15 @@ async function run() {
 
       res.send(result);
     });
-
+//----------------------------------------DELETE with ID------------------------
+    app.delete('/myexports/:id',async(req,res)=>{
+      const id =req.params.id
+      const que={_id: new ObjectId(id)}
+      const result=await IEcol.deleteOne(que)
+      console.log("deleted");
+      
+      res.send(result)
+    })
     // ---------------------------Ping the Server----------------------------------
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
