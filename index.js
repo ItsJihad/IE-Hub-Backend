@@ -8,7 +8,7 @@ app.use(express.json());
 
 const port = 3000;
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const uri = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@cluster0.xiyzyju.mongodb.net/?appName=Cluster0`;
 
@@ -50,13 +50,30 @@ async function run() {
 
     const IEdb = client.db("IEdb");
     const IEcol = IEdb.collection("AllProducts");
-    // ------------------------------------------------------------
-    app.get("/", AuthVerification, async (req, res) => {
+    // --------------------------get all product at once----------------------------------
+    app.get("/products",  async (req, res) => {
       const cursor = IEcol.find();
       const result = await cursor.toArray();
       res.send(result);
     });
-    // ----------------------------------------------------------
+//-----------------------------get a specific product with ID------------------------------------
+   app.get('/products/:id',async(req,res)=>{
+    console.log('hitting');
+    
+    const id=req.params.id
+    console.log(id);
+    console.log(typeof(id));
+    
+    const query= { _id: new ObjectId(id)}
+    const result = await IEcol.findOne(query)
+    console.log(result);
+    
+    res.send(result)
+   })
+
+
+
+    // --------------------------------POST API--------------------------
     app.post("/products", AuthVerification, async (req, res) => {
       const productDetails = req.body;
       console.log("hitting the post");
@@ -64,7 +81,7 @@ async function run() {
       const result = await IEcol.insertOne(productDetails);
       res.send(result);
     });
-    // -------------------------------------------------------------
+    // ---------------------------Ping the Server----------------------------------
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
