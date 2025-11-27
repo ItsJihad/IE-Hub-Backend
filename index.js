@@ -142,6 +142,25 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
+
+    //----------------------------------delete specific user's imports-------------------------
+    app.delete('/delete-myimports/:id',async(req,res)=>{
+      const ID={_id: new ObjectId(req.params.id)}
+      const target =await UserImports.findOne(ID) //here i got the targeted product from the ImportList DB
+      //
+      
+      const productID=target.productID._id //here i excluded the main id of the product
+      const productQuantity=target.quantity //here i excluded the quantity of the units
+      //
+
+      const mainProduct = await IEcol.findOne(productID) //picked the main product from all products
+      await IEcol.updateOne(mainProduct,{$inc:{quantity:+productQuantity}}) // added quantity as per calculation
+      const result= UserImports.deleteOne(ID) //deleted the product from my imports DB
+      res.send(result)
+      
+
+      
+    })
     //------------------------------------get specific user Export ---------------------------
     app.get("/myexports", AuthVerification, async (req, res) => {
       const email = req.query.email;
