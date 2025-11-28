@@ -36,6 +36,8 @@ const AuthVerification = async (req, res, next) => {
     res.status(401).send({ message: "unauthorized" });
   }
   const token = AuthToken.split(" ")[1];
+  console.log(token);
+
   try {
     const decode = await admin.auth().verifyIdToken(token);
 
@@ -55,17 +57,20 @@ async function run() {
     const IEcol = IEdb.collection("AllProducts");
     const UserImports = IEdb.collection("UserImports");
     // --------------------------get all product at once----------------------------------
-    app.get("/products", async (req, res) => {
+    app.get("/products", AuthVerification, async (req, res) => {
       const cursor = IEcol.find();
       const result = await cursor.toArray();
+      console.log("hitting all products");
 
       res.send(result);
     });
     //-----------------------------get a specific product with ID------------------------------------
-    app.get("/products/:id", async (req, res) => {
+    app.get("/products/:id", AuthVerification, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await IEcol.findOne(query);
+      console.log("get a specific product with ID");
+
       res.send(result);
     });
 
@@ -85,8 +90,8 @@ async function run() {
     // --------------------------------POST API-------------------------------------------------------------------------------
     app.post("/products", AuthVerification, async (req, res) => {
       const quantity = Number(req.body.quantity);
-      const price= Number(req.body.price)
-      const rating= Number(req.body.rating)
+      const price = Number(req.body.price);
+      const rating = Number(req.body.rating);
 
       const TobeStored = {
         name: req.body.name,
@@ -102,10 +107,12 @@ async function run() {
     });
 
     //--------------------------------------------delete specific product by ID from Import---------------------
-    app.delete("/myimports/:id", async (req, res) => {
+    app.delete("/myimports/:id", AuthVerification, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await UserImports.deleteOne(query);
+      console.log("delete specific product by ID from Import");
+
       res.send(result);
     });
 
@@ -144,23 +151,22 @@ async function run() {
     });
 
     //----------------------------------delete specific user's imports-------------------------
-    app.delete('/delete-myimports/:id',async(req,res)=>{
-      const ID={_id: new ObjectId(req.params.id)}
-      const target =await UserImports.findOne(ID) //here i got the targeted product from the ImportList DB
-      //
-      
-      const productID=target.productID._id //here i excluded the main id of the product
-      const productQuantity=target.quantity //here i excluded the quantity of the units
+    app.delete("/delete-myimports/:id", AuthVerification, async (req, res) => {
+      const ID = { _id: new ObjectId(req.params.id) };
+      const target = await UserImports.findOne(ID); //here i got the targeted product from the ImportList DB
       //
 
-      const mainProduct = await IEcol.findOne(productID) //picked the main product from all products
-      await IEcol.updateOne(mainProduct,{$inc:{quantity:+productQuantity}}) // added quantity as per calculation
-      const result= UserImports.deleteOne(ID) //deleted the product from my imports DB
-      res.send(result)
-      
+      const productID = target.productID._id; //here i excluded the main id of the product
+      const productQuantity = target.quantity; //here i excluded the quantity of the units
+      //
 
-      
-    })
+      const mainProduct = await IEcol.findOne(productID); //picked the main product from all products
+      await IEcol.updateOne(mainProduct, {
+        $inc: { quantity: +productQuantity },
+      }); // added quantity as per calculation
+      const result = UserImports.deleteOne(ID); //deleted the product from my imports DB
+      res.send(result);
+    });
     //------------------------------------get specific user Export ---------------------------
     app.get("/myexports", AuthVerification, async (req, res) => {
       const email = req.query.email;
@@ -174,15 +180,37 @@ async function run() {
 
       res.send(result);
     });
-//----------------------------------------DELETE with ID------------------------
-    app.delete('/myexports/:id',async(req,res)=>{
-      const id =req.params.id
-      const que={_id: new ObjectId(id)}
-      const result=await IEcol.deleteOne(que)
+    //--------------------------------------Update An Export -----------------------
+    app.patch("/products/:id", AuthVerification,async (req, res) => {
+      const id = req.params.id;
+      const UpdatedProduct = req.body;
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $set: {
+          name: UpdatedProduct.name,
+          photourl: UpdatedProduct.photourl,
+          quantity: UpdatedProduct.quantity,
+          price: UpdatedProduct.price,
+        },
+      };
+      const options = {};
+
+      const result = await IEcol.updateOne(query, update, options);
+      console.log("updating");
+      console.log(result);
+
+      res.send(result);
+    });
+
+    //----------------------------------------DELETE with ID------------------------
+    app.delete("/myexports/:id", AuthVerification, async (req, res) => {
+      const id = req.params.id;
+      const que = { _id: new ObjectId(id) };
+      const result = await IEcol.deleteOne(que);
       console.log("deleted");
-      
-      res.send(result)
-    })
+
+      res.send(result);
+    });
     // ---------------------------Ping the Server----------------------------------
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
