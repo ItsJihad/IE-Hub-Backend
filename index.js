@@ -22,7 +22,8 @@ const client = new MongoClient(uri, {
 
 const admin = require("firebase-admin");
 
-const serviceAccount = require("./firebase-adminsdk.json");
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, "base64").toString("utf8");
+const serviceAccount = JSON.parse(decoded);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -36,7 +37,7 @@ const AuthVerification = async (req, res, next) => {
     res.status(401).send({ message: "unauthorized" });
   }
   const token = AuthToken.split(" ")[1];
-  console.log(token);
+  // console.log(token);
 
   try {
     const decode = await admin.auth().verifyIdToken(token);
@@ -60,7 +61,7 @@ async function run() {
     app.get("/products", AuthVerification, async (req, res) => {
       const cursor = IEcol.find();
       const result = await cursor.toArray();
-      console.log("hitting all products");
+      // console.log("hitting all products");
 
       res.send(result);
     });
@@ -69,7 +70,7 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await IEcol.findOne(query);
-      console.log("get a specific product with ID");
+      // console.log("get a specific product with ID");
 
       res.send(result);
     });
@@ -111,7 +112,7 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await UserImports.deleteOne(query);
-      console.log("delete specific product by ID from Import");
+      // console.log("delete specific product by ID from Import");
 
       res.send(result);
     });
@@ -196,8 +197,8 @@ async function run() {
       const options = {};
 
       const result = await IEcol.updateOne(query, update, options);
-      console.log("updating");
-      console.log(result);
+      // console.log("updating");
+      // console.log(result);
 
       res.send(result);
     });
@@ -207,19 +208,19 @@ async function run() {
       const id = req.params.id;
       const que = { _id: new ObjectId(id) };
       const result = await IEcol.deleteOne(que);
-      console.log("deleted");
+      // console.log("deleted");
 
       res.send(result);
     });
     // ---------------------------Ping the Server----------------------------------
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     app.listen(port, () => {
-      console.log("server is up at : ", port);
+      // console.log("server is up at : ", port);
     });
   }
 }
